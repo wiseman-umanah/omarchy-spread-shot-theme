@@ -94,6 +94,7 @@ static float scroll, stage_dist, world_speed = WORLD_SPEED;
 static long score, hi_score, run_start_hi, next_extra = EXTRA_LIFE_EVERY, ending_bonus;
 static int lives = START_LIVES, loop_count;
 static int stage_state = ST_PLAY, state_timer, fade_in, title_timer, warning_timer, game_over_timer;
+static int pending_stage = -1; // set by game_select_stage; otherwise stages advance in order
 static int plat_timer, grunt_timer, sniper_timer, capsule_timer;
 static int ai_target_x = 80, ai_retarget, ai_jump_hold;
 static bool exit_requested;
@@ -739,8 +740,13 @@ void game_step(void) {
     if ((stage_state == ST_CLEAR || stage_state == ST_ENDING) && --state_timer <= 0)
         stage_state = ST_FADE_OUT, state_timer = 30;
     if (stage_state == ST_FADE_OUT && --state_timer <= 0) {
-        if (stage == NUM_STAGES - 1) loop_count++;
-        load_stage((stage + 1) % NUM_STAGES);
+        int next = pending_stage;
+        if (next < 0) {
+            if (stage == NUM_STAGES - 1) loop_count++;
+            next = (stage + 1) % NUM_STAGES;
+        }
+        pending_stage = -1;
+        load_stage(next);
         fade_in = 30;
     }
     if (fade_in > 0) fade_in--;
@@ -1134,6 +1140,14 @@ bool game_exit_requested(void) {
     bool r = exit_requested;
     exit_requested = false;
     return r;
+}
+
+void game_select_stage(int n) {
+    if (game_mode || n < 0 || n >= NUM_STAGES) return; // never interrupt a human's run
+    if (n == stage && stage_state != ST_FADE_OUT && pending_stage < 0) return;
+    LOG("stage %d selected\n", n + 1);
+    pending_stage = n;
+    if (stage_state != ST_FADE_OUT) stage_state = ST_FADE_OUT, state_timer = 30;
 }
 
 void game_preview(int n, bool at_boss) {

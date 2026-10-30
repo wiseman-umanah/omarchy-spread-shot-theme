@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <sys/inotify.h>
 #include <sys/signalfd.h>
 #include <time.h>
 #include <unistd.h>
@@ -327,6 +328,61 @@ static void reg_remove(void *d, struct wl_registry *reg, uint32_t name) { (void)
 
 static const struct wl_registry_listener registry_listener = {.global = reg_global, .global_remove = reg_remove};
 
+// ---------------------------------------------------------------------------
+// Omarchy background switcher: picking one of the theme's stage stills
+// (Super+Ctrl+Space) moves the demo to that stage.
+// ---------------------------------------------------------------------------
+
+static const char *STAGE_BACKGROUNDS[NUM_STAGES] = {"1-jungle", "2-snowfield", "3-enemy-base", "4-alien-hive"};
+
+static bool background_dir(char *buf, size_t n) {
+    const char *home = getenv("HOME");
+    if (!home) return false;
+    snprintf(buf, n, "%s/.local/state/omarchy/current", home);
+    return true;
+}
+
+// Returns the stage whose still Omarchy currently shows, or -1 for any other background.
+static int background_stage(void) {
+    char dir[512], link[600], target[1024];
+    if (!background_dir(dir, sizeof dir)) return -1;
+    snprintf(link, sizeof link, "%s/background", dir);
+    ssize_t len = readlink(link, target, sizeof target - 1);
+    if (len <= 0) return -1;
+    target[len] = '\0';
+    const char *base = strrchr(target, '/') ? strrchr(target, '/') + 1 : target;
+    for (int i = 0; i < NUM_STAGES; i++) {
+        size_t sl = strlen(STAGE_BACKGROUNDS[i]);
+        if (!strncmp(base, STAGE_BACKGROUNDS[i], sl) && base[sl] == '.') return i;
+    }
+    return -1;
+}
+
+// Watches the directory holding the `background` symlink; -1 if unavailable.
+static int watch_background(void) {
+    char dir[512];
+    if (!background_dir(dir, sizeof dir)) return -1;
+    int fd = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
+    if (fd >= 0 && inotify_add_watch(fd, dir, IN_CREATE | IN_MOVED_TO) < 0) {
+        close(fd);
+        return -1;
+    }
+    return fd;
+}
+
+static void background_changed(int fd) {
+    char events[4096] __attribute__((aligned(__alignof__(struct inotify_event))));
+    bool relevant = false;
+    ssize_t len;
+    while ((len = read(fd, events, sizeof events)) > 0)
+        for (char *p = events; p < events + len;) {
+            struct inotify_event *ev = (struct inotify_event *)p;
+            if (ev->len && !strcmp(ev->name, "background")) relevant = true;
+            p += sizeof *ev + ev->len;
+        }
+    if (relevant) game_select_stage(background_stage());
+}
+
 static int run_wayland(void) {
     st.display = wl_display_connect(NULL);
     if (!st.display) {
@@ -366,9 +422,10 @@ static int run_wayland(void) {
     sigprocmask(SIG_BLOCK, &mask, NULL);
     int sfd = signalfd(-1, &mask, SFD_CLOEXEC | SFD_NONBLOCK);
 
-    struct pollfd fds[2] = {
+    struct pollfd fds[3] = {
         {.fd = wl_display_get_fd(st.display), .events = POLLIN},
         {.fd = sfd, .events = POLLIN},
+        {.fd = watch_background(), .events = POLLIN}, // poll() skips a negative fd
     };
 
     while (st.running) {
@@ -377,7 +434,7 @@ static int run_wayland(void) {
             wl_display_cancel_read(st.display);
             break;
         }
-        if (poll(fds, 2, -1) < 0) {
+        if (poll(fds, 3, -1) < 0) {
             wl_display_cancel_read(st.display);
             if (errno == EINTR) continue;
             break;
@@ -398,8 +455,10 @@ static int run_wayland(void) {
             }
             wl_display_flush(st.display);
         }
+        if (fds[2].revents & POLLIN) background_changed(fds[2].fd);
     }
 
+    if (fds[2].fd >= 0) close(fds[2].fd);
     game_save_hiscore();
     destroy_buffers();
     free(st.xmap);
@@ -539,6 +598,7 @@ int main(int argc, char **argv) {
     rng_seed(headless ? 1 : (uint32_t)time(NULL));
     game_init();
     if (start_stage || at_boss) game_preview(start_stage, at_boss);
+    else if (!headless && background_stage() > 0) game_preview(background_stage(), false); // resume the picked stage
 
     if (sim_ticks >= 0) return simulate(sim_ticks, idle_player);
     if (record_frames >= 0) return record(snap_ticks, record_frames, scale, hud);

@@ -33,6 +33,8 @@ Then press <kbd>Super</kbd>+<kbd>Ctrl</kbd>+<kbd>G</kbd> to play. Details below.
 - Four stages, each ending in a boss: a defense wall, a tank, a shielded reactor and an alien heart
 - Shoot the flying capsule for the spread gun; 3 lives, an extra one every 20,000 points
 - Beat all four for the ending, then loop 2 begins with tougher enemies. Your high score is saved
+- Pick a stage with Omarchy's background switcher (<kbd>Super</kbd>+<kbd>Ctrl</kbd>+<kbd>Space</kbd>):
+  choosing a stage's still moves the game to that stage, and it starts there after a reboot
 - About 7 MB of RAM; drawn on the CPU (no GPU), and it stops drawing entirely while windows cover it
 
 ## Install

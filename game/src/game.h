@@ -23,5 +23,6 @@ void game_end_run(void);   // back to the AI demo
 bool game_exit_requested(void); // true once after a game over finishes
 
 void game_preview(int stage, bool boss); // jump to a stage (0-based), optionally at its boss
+void game_select_stage(int stage);       // demo only: fade over to a stage (0-based)
 bool game_player_settled(void);           // player alive, standing, not blinking (for snapshots)
 void game_save_hiscore(void);
