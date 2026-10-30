@@ -4,7 +4,17 @@ An all-black, arcade-red [Omarchy](https://omarchy.org) theme with an optional *
 a pixel-art run-and-gun game that the computer plays in the background and that you can take
 over with the arrow keys at any time.
 
-![Spread Shot preview](preview.png)
+![Spread Shot gameplay](docs/spread-shot.gif)
+
+## Quick start
+
+```sh
+omarchy theme install https://github.com/wiseman-umanah/omarchy-spread-shot-theme
+sudo pacman -S --needed base-devel wayland wayland-protocols
+make -C ~/.config/omarchy/themes/spread-shot/game install
+```
+
+Then press <kbd>Super</kbd>+<kbd>Ctrl</kbd>+<kbd>G</kbd> to play. Details below.
 
 ## What's in it
 
@@ -83,7 +93,8 @@ Your high score stays in `~/.local/state/spread-shot/` until you delete it.
 cd game
 make          # build ./spread-shot
 make check    # headless tests: all stages and bosses clear, ending plays, game over works
-make art      # re-render backgrounds/, preview.png and unlock.png from the game (needs ImageMagick)
+make art      # re-render backgrounds/ and unlock.png from the game (needs ImageMagick)
+make trailer  # render docs/spread-shot.gif and build/spread-shot-trailer.mp4 (needs ffmpeg)
 ./spread-shot --stage 3 --boss   # run it (stop your installed copy first: pkill -x spread-shot)
 ./spread-shot --help
 ```
@@ -93,6 +104,7 @@ make art      # re-render backgrounds/, preview.png and unlock.png from the game
 ├── colors.toml, icons.theme      theme palette and icon set
 ├── backgrounds/                  one still per stage (rendered by `make art`)
 ├── preview.png, unlock.png       theme picker preview and lock-screen logo
+├── docs/spread-shot.gif          the gameplay loop at the top of this README
 └── game/
     ├── src/                      main.c (Wayland + CLI), game.c, stage.c, art.c, gfx.c
     ├── protocol/                 vendored wlr-layer-shell protocol XML

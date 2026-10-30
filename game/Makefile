@@ -4,7 +4,8 @@
 #   make check       headless gameplay tests
 #   make install     install the game and wire it into Omarchy (hooks + Super+Ctrl+G)
 #   make uninstall   remove everything `make install` added
-#   make art         re-render the theme's backgrounds, preview and unlock images
+#   make art         re-render the theme's backgrounds and unlock images
+#   make trailer     render the README GIF and a gameplay trailer video
 
 VERSION ?= 1.0.0
 PREFIX ?= $(HOME)/.local
@@ -63,7 +64,10 @@ uninstall:
 art: spread-shot
 	scripts/render-art.sh ./spread-shot ..
 
+trailer: spread-shot | $(BUILD)
+	scripts/render-trailer.sh ./spread-shot $(BUILD)/spread-shot-trailer.mp4 ../docs/spread-shot.gif
+
 clean:
 	rm -rf $(BUILD) spread-shot
 
-.PHONY: all check install uninstall art clean
+.PHONY: all check install uninstall art trailer clean

@@ -437,6 +437,32 @@ static int write_ppm(const char *path, int scale) {
     return fclose(f) == 0 ? 0 : 1;
 }
 
+// Writes `frames` consecutive frames as raw RGB24 to stdout, e.g. for
+//   spread-shot --record 300 --scale 4 | ffmpeg -f rawvideo -pix_fmt rgb24 -s 1368x768 -r 30 -i - out.mp4
+static int record(long skip_ticks, long frames, int scale, bool hud) {
+    for (long i = 0; i < skip_ticks; i++) game_step();
+    size_t row_len = (size_t)W * scale * 3;
+    unsigned char *row = malloc(row_len);
+    if (!row) return 1;
+    for (long f = 0; f < frames; f++) {
+        game_step();
+        game_render(hud);
+        for (int y = 0; y < H; y++) {
+            for (int x = 0; x < W * scale; x++) {
+                px c = fb[y][x / scale];
+                row[x * 3] = (unsigned char)(c >> 16), row[x * 3 + 1] = (unsigned char)(c >> 8), row[x * 3 + 2] = (unsigned char)c;
+            }
+            for (int k = 0; k < scale; k++)
+                if (fwrite(row, 1, row_len, stdout) != row_len) {
+                    free(row);
+                    return 1;
+                }
+        }
+    }
+    free(row);
+    return 0;
+}
+
 static void usage(FILE *out) {
     fprintf(out,
             "Usage: spread-shot [options]\n"
@@ -453,6 +479,7 @@ static void usage(FILE *out) {
             "  --ticks N          with --snapshot: simulate N ticks first (default 240)\n"
             "  --scale N          with --snapshot: integer upscale (default 1)\n"
             "  --no-hud           with --snapshot: omit the HUD and logo\n"
+            "  --record FRAMES    after --ticks, write FRAMES raw RGB24 frames to stdout (pipe to ffmpeg)\n"
             "  --logo-only        with --snapshot: render just the title logo\n"
             "  --verbose          log stage events to stderr\n"
             "  --version          print the version and exit\n"
@@ -461,7 +488,7 @@ static void usage(FILE *out) {
 
 int main(int argc, char **argv) {
     int start_stage = 0, scale = 1;
-    long sim_ticks = -1, snap_ticks = 240;
+    long sim_ticks = -1, snap_ticks = 240, record_frames = -1;
     bool at_boss = false, idle_player = false, hud = true, logo_only = false;
     const char *snapshot = NULL;
 
@@ -488,6 +515,8 @@ int main(int argc, char **argv) {
             snap_ticks = atol(argv[++i]);
         } else if (!strcmp(a, "--scale") && has_value) {
             scale = atoi(argv[++i]);
+        } else if (!strcmp(a, "--record") && has_value) {
+            record_frames = atol(argv[++i]);
         } else if (!strcmp(a, "--no-hud")) {
             hud = false;
         } else if (!strcmp(a, "--logo-only")) {
@@ -505,13 +534,14 @@ int main(int argc, char **argv) {
         return 2;
     }
 
-    bool headless = sim_ticks >= 0 || snapshot;
+    bool headless = sim_ticks >= 0 || snapshot || record_frames >= 0;
     game_persist = !headless; // tests and artwork never touch the saved high score
     rng_seed(headless ? 1 : (uint32_t)time(NULL));
     game_init();
     if (start_stage || at_boss) game_preview(start_stage, at_boss);
 
     if (sim_ticks >= 0) return simulate(sim_ticks, idle_player);
+    if (record_frames >= 0) return record(snap_ticks, record_frames, scale, hud);
     if (snapshot) {
         for (long i = 0; i < snap_ticks; i++) game_step();
         for (int i = 0; i < 600 && !game_player_settled(); i++) game_step(); // skip respawns and dodges

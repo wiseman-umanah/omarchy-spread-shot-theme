@@ -100,7 +100,7 @@ static bool exit_requested;
 
 #define LOG(...)                                                                                                       \
     do {                                                                                                               \
-        if (game_verbose) fprintf(stderr, __VA_ARGS__);                                                                \
+        if (game_verbose) fprintf(stderr, "[%6ld] ", tick_count), fprintf(stderr, __VA_ARGS__);                          \
     } while (0)
 
 static float difficulty(void) { return 1.0f + 0.3f * loop_count; }
