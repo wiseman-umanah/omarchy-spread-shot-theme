@@ -1,0 +1,35 @@
+mode = "dark"
+
+# Spread Shot: pure black chrome, arcade red accents, explosion orange/yellow highlights.
+accent = "#e01818"
+selection = "#3a0808"
+muted = "#5a5a5a"
+
+background = "#000000"
+dark_background = "#000000"
+darker_background = "#000000"
+lighter_background = "#141414"
+
+foreground = "#e8e8e8"
+dark_foreground = "#4a4a4a"
+light_foreground = "#f4f4f4"
+bright_foreground = "#ffffff"
+
+red = "#e01818"
+yellow = "#ffd040"
+orange = "#ff8000"
+green = "#3fa34d"
+cyan = "#4fb3bf"
+blue = "#3c6ccf"
+magenta = "#c0306a"
+brown = "#7a3a10"
+
+bright_red = "#ff4a3a"
+bright_yellow = "#ffe680"
+bright_green = "#62c96e"
+bright_cyan = "#7fd6e0"
+bright_blue = "#6b93ea"
+bright_magenta = "#e05a92"
+
+hyprland_active_border = "rgba(e01818ee) rgba(ff8000ee) 45deg"
+hyprland_inactive_border = "rgba(1a1a1aaa)"

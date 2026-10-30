@@ -1,0 +1,16 @@
+#!/bin/bash
+# Omarchy hook (theme-set and post-boot): runs the Spread Shot wallpaper game while the
+# spread-shot theme is active and stops it for any other theme.
+# theme-set passes the new theme's slug as $1; post-boot passes nothing.
+
+GAME="@BINDIR@/spread-shot"
+
+theme="${1:-$(omarchy theme current)}"
+theme="$(echo "$theme" | tr '[:upper:] ' '[:lower:]-')"
+
+pkill -x spread-shot 2>/dev/null
+
+[[ $theme == spread-shot ]] || exit 0
+[[ -x $GAME ]] || exit 0
+
+setsid -f "$GAME" >/dev/null 2>&1
